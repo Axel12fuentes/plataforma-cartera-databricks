@@ -7,8 +7,8 @@ medallón sobre Delta Lake, con ingesta incremental.
 Es la continuación del [warehouse dimensional de créditos](https://github.com/Axel12fuentes/warehouse-dimensional-creditos):
 los créditos que allí se colocan son los que aquí se cobran.
 
-> **Estado:** bronce, plata y oro funcionando. Pendiente: modelo estrella en
-> oro, orquestación y despliegue.
+> **Estado:** pipeline completo, orquestado y con permisos a nivel de fila y
+> columna. Pendiente: modelo estrella en oro y despliegue con Asset Bundles.
 
 ---
 
@@ -37,6 +37,9 @@ graph TD
   BRONCE --> PLATA[Plata<br/>tipado, deduplicado,<br/>cuarentena]
   PLATA --> ORO[Oro<br/>tramos de mora<br/>por asesor y oficina]
   ORO --> BI[Power BI]
+  JOB[Trabajo diario<br/>disparado por llegada de archivo] -.orquesta.-> BRONCE
+  JOB -.-> PLATA
+  JOB -.-> ORO
 ```
 
 ### Las capas
@@ -71,6 +74,9 @@ graph TD
 | Cálculo de la mora | `LEFT ANTI JOIN` | Mora = cuota vencida **sin** pago. El anti join lo dice directo |
 | Tramos | 1-8, 9-30, 31-60, 61-90, +90 | Los que usa el sistema financiero peruano |
 | Cómputo | **Serverless** | Arranca en segundos y se apaga solo: imposible olvidarlo encendido |
+| Disparo del trabajo | **Llegada de archivo**, no horario fijo | Un cron corre aunque no haya datos, y no corre si el archivo llega tarde |
+| Permisos por asesor | **Filtro de fila**, no una vista por asesor | Una tabla, una regla. Un alta de personal no toca el pipeline |
+| Saldo de capital | **Máscara de columna** | El dato sensible se oculta en el motor, no en el tablero |
 
 ---
 
@@ -115,7 +121,15 @@ Catálogo → `dev` → `bronce` → `landing` → **Cargar en este volumen**.
 notebooks/02_bronce.py     Auto Loader
 notebooks/03_plata.sql     limpieza y cuarentena
 notebooks/04_oro.sql       tramos de mora
+notebooks/05_gobierno.sql  filtro de fila y máscara de columna
 ```
+
+### 5. Orquestar
+
+Trabajos → crear trabajo `cartera_medallon_diario` con tres tareas encadenadas
+(`bronce` → `plata` → `oro`) sobre serverless, y un disparador por llegada de
+archivo sobre `/Volumes/dev/bronce/landing/`. El detalle, en
+[docs/02-orquestacion-y-gobierno.md](docs/02-orquestacion-y-gobierno.md).
 
 ---
 
@@ -126,7 +140,7 @@ notebooks/04_oro.sql       tramos de mora
 ├─ notebooks/      Los cuadernos, en orden de ejecución
 ├─ scripts/        El generador de datos
 ├─ datos/          Los CSV (ignorados por git)
-└─ docs/           Cuaderno de errores
+└─ docs/           Cuaderno de errores · orquestación y gobierno
 ```
 
 ---
@@ -137,9 +151,9 @@ notebooks/04_oro.sql       tramos de mora
 - [x] Bronce con Auto Loader incremental
 - [x] Plata: tipado, deduplicación, cuarentena
 - [x] Oro: tramos de mora por asesor y oficina
+- [x] Orquestación con Lakeflow Jobs, disparada por llegada de archivo
+- [x] Permisos: cada asesor ve solo su cartera, con el saldo enmascarado
 - [ ] Modelo estrella en oro
-- [ ] Orquestación con Lakeflow Jobs
-- [ ] Permisos: cada asesor ve solo su cartera
 - [ ] Despliegue con Asset Bundles
 
 ---

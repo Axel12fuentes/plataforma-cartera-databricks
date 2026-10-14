@@ -116,3 +116,43 @@ Se resolvió con `pathGlobFilter`:
 
 Funciona, pero es un parche. El diseño correcto es una subcarpeta por origen:
 `landing/pagos/` y `landing/cuotas/`. Queda anotado para la siguiente versión.
+
+---
+
+## 5 · El disparador quedó en pausa y el trabajo nunca corrió
+
+**El síntoma.** Creé el disparador por llegada de archivo, le di guardar, y el
+trabajo no se ejecutaba al subir archivos nuevos. Todo se veía bien
+configurado.
+
+**La causa.** Databricks crea el disparador por llegada de archivo **en pausa**.
+Hay que darle **Reanudar** de forma explícita. La pantalla lo muestra, pero en
+letra pequeña junto al nombre del disparador.
+
+**Por qué no es un detalle.** Es exactamente el modo de fallo contra el que
+sirve la orquestación: nada da error, no hay alerta que disparar —porque la
+alerta solo salta si una corrida falla, y aquí no hubo ninguna corrida— y los
+datos simplemente dejan de actualizarse. La única señal es mirar el historial
+de ejecuciones y ver que está vacío.
+
+**Lo que aprendí.** Después de configurar un disparador, la verificación no es
+leer la configuración: es **subir un archivo y comprobar que apareció una
+ejecución**.
+
+---
+
+## 6 · El filtro de fila me mentía en mis propias consultas
+
+Puesto el filtro sobre `cartera_mora`, la consulta de control devolvía 787
+créditos de un solo asesor. Parecía que la carga había perdido datos.
+
+No: el filtro también se aplica a quien lo creó. Estaba viendo mi recorte.
+
+```sql
+ALTER TABLE dev.oro.cartera_mora DROP ROW FILTER;
+ALTER TABLE dev.oro.cartera_mora ALTER COLUMN saldo_capital DROP MASK;
+```
+
+Es la contracara de que la regla viva en el motor: no hay forma de rodearla
+escribiendo otro SQL —ni siquiera para uno mismo—, y eso es justamente lo que
+la hace confiable.
