@@ -156,7 +156,7 @@ del despliegue y los dos entornos en
 ├─ notebooks/      Los cuadernos, en orden de ejecución
 ├─ scripts/        El generador de datos
 ├─ datos/          Los CSV (ignorados por git)
-└─ docs/           Cuaderno de errores · orquestación y gobierno · despliegue
+└─ docs/           Errores · orquestación y gobierno · despliegue · rendimiento
 ```
 
 ---
