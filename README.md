@@ -156,8 +156,20 @@ del despliegue y los dos entornos en
 ├─ notebooks/      Los cuadernos, en orden de ejecución
 ├─ scripts/        El generador de datos
 ├─ datos/          Los CSV (ignorados por git)
-└─ docs/           Errores · orquestación y gobierno · despliegue · rendimiento
+└─ docs/           Errores · gobierno · despliegue · rendimiento · apagado
 ```
+
+---
+
+## Documentación
+
+| Documento | De qué trata |
+|---|---|
+| [01 · Cuaderno de errores](docs/01-cuaderno-de-errores.md) | Los 9 fallos reales, con causa y corrección |
+| [02 · Orquestación y gobierno](docs/02-orquestacion-y-gobierno.md) | El trabajo, el disparador por archivo, filtro de fila y máscara |
+| [03 · Git y Asset Bundles](docs/03-git-y-asset-bundles.md) | Carpeta Git, catálogo parametrizado, los dos entornos |
+| [04 · Rendimiento](docs/04-rendimiento.md) | Qué se midió y qué **no** demuestra |
+| [05 · Apagar y reconstruir](docs/05-apagar-y-reconstruir.md) | Qué cuesta, cómo apagarlo todo y cómo levantarlo de cero |
 
 ---
 
@@ -173,6 +185,16 @@ del despliegue y los dos entornos en
 - [x] Despliegue con Asset Bundles en dos entornos
 - [x] Mantenimiento: compactación, clustering y retención
 - [ ] Modelo estrella en oro
+
+---
+
+## Costo
+
+Mientras el workspace exista, Azure cobra el NAT Gateway por hora (~$30/mes),
+aunque no se use. El cómputo serverless solo cobra mientras corre.
+
+Para apagarlo todo y volver a levantarlo después, el procedimiento completo
+está en [docs/05-apagar-y-reconstruir.md](docs/05-apagar-y-reconstruir.md).
 
 ---
 
