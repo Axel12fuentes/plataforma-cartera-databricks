@@ -156,3 +156,116 @@ ALTER TABLE dev.oro.cartera_mora ALTER COLUMN saldo_capital DROP MASK;
 Es la contracara de que la regla viva en el motor: no hay forma de rodearla
 escribiendo otro SQL —ni siquiera para uno mismo—, y eso es justamente lo que
 la hace confiable.
+
+---
+
+## 7 · `databricks auth login` se fue a la puerta equivocada
+
+**El síntoma.** Al autenticar la CLI, nunca preguntó por el workspace: saltó
+del nombre del perfil directo a `Opening login.databricks.com in your
+browser...`. El navegador ofrecía elegir entre cuentas de Databricks en AWS y
+una Free Edition. Ninguna servía.
+
+**La causa.** Sin `--host`, la CLI asume que quieres entrar a la **consola de
+cuenta de Databricks**. Eso existe en AWS y GCP. En Azure no: el workspace es
+un recurso de Azure y la identidad la pone **Entra ID**, no Databricks.
+
+**La corrección.**
+
+```bash
+databricks auth login \
+  --host https://adb-<id>.<n>.azuredatabricks.net \
+  --profile axel-dp750
+```
+
+Con `--host` va directo al `/oidc` del workspace, que redirige al login de
+Microsoft. Comprobación: `databricks auth profiles` debe decir `Valid: YES`.
+
+**Lo que aprendí.** Azure Databricks y Databricks en AWS no comparten
+identidad. Es la misma razón por la que en Azure los permisos de workspace se
+gestionan con grupos de Entra ID.
+
+---
+
+## 8 · El segundo catálogo no se podía crear
+
+**El síntoma.** El mismo error del punto 1, pero esta vez también desde la
+interfaz, que fue justamente lo que salvó la primera vez:
+
+```
+Metastore storage root URL does not exist.
+```
+
+**La causa.** Al crear `dev`, la interfaz le asignó sola la única carpeta
+disponible —la raíz del almacenamiento del workspace— y se la quedó entera.
+**Dos catálogos no pueden compartir la misma ubicación gestionada**, así que
+`prod` se quedó sin dónde vivir y ya no había nada que la interfaz pudiera
+resolver por su cuenta.
+
+**La corrección.** Armar la cadena a mano, que es la del Dominio 2:
+
+```bash
+databricks external-locations create prod_storage \
+  "abfss://unity-catalog-storage@<cuenta>.dfs.core.windows.net/prod" \
+  dbw_axel_dp750          # la credencial del workspace, ya existente
+
+databricks catalogs create prod \
+  --storage-root "abfss://unity-catalog-storage@<cuenta>.dfs.core.windows.net/prod"
+```
+
+**Lo que aprendí (incompleto: ver el error 9).** `MANAGED LOCATION` no es un
+detalle de configuración: es
+lo que hace posible **aislar físicamente** un entorno de otro. Es exactamente
+lo que pregunta el examen cuando habla de separar dominios o entornos, y el
+motivo por el que un catálogo por entorno es mejor que un esquema por entorno:
+los datos de `prod` quedan en otra carpeta, no solo bajo otro nombre.
+
+
+---
+
+## 9 · Tres comandos en verde y la credencial no llegaba
+
+Este es el mejor error de todo el proyecto, por cómo se escondió.
+
+**El síntoma.** Con `prod` recién montado, el trabajo falló en la primera
+tarea:
+
+```
+[UNAUTHORIZED_ACCESS] PERMISSION_DENIED: The credential 'dbw_axel_dp750' is a
+workspace default credential that is only allowed to access data in the
+following paths:
+'abfss://unity-catalog-storage@dbstorage....dfs.core.windows.net/7405618998096237'
+```
+
+**La causa.** La credencial por defecto del workspace está **acotada a una
+ruta**. El catálogo `prod` se creó en `.../prod`, que queda fuera de ese
+prefijo.
+
+**Por qué no se vio antes.** Porque nada avisó:
+
+| Paso | Resultado | Por qué mintió |
+|---|---|---|
+| Crear la ubicación externa | ✅ | Unity Catalog registra el objeto; no prueba la credencial contra la ruta |
+| Crear el catálogo | ✅ | Hereda el permiso de la ubicación externa recién creada |
+| Copiar 11 archivos con `fs cp` | ✅ | La API de archivos no usa la credencial de almacenamiento |
+| Escribir una tabla desde Spark | ❌ | **Aquí sí** se usa la credencial, y recién aquí se descubre |
+
+Tres comandos en verde antes del que importaba, y el error apareció dos pasos
+después y en otro sitio.
+
+**La corrección.** Poner el catálogo **dentro** del prefijo permitido:
+
+```bash
+databricks catalogs create prod   --storage-root "abfss://unity-catalog-storage@<cuenta>.dfs.core.windows.net/<id>/prod"
+```
+
+Y de paso quedó resuelta una duda: Unity Catalog **sí** permite que la
+ubicación gestionada de un catálogo cuelgue de la ruta de otro, mientras no
+sea exactamente la misma. Lo que no permite es compartirla.
+
+**Lo que aprendí.** La credencial de almacenamiento no es un interruptor de
+sí/no: tiene un **alcance de rutas**, y Unity Catalog no lo verifica al
+registrar los objetos, solo al leer o escribir datos de verdad. Para
+comprobar una ubicación externa antes de construir sobre ella está
+**Probar conexión** en su pantalla, o sencillamente escribir una tabla de una
+fila. Que los comandos de administración pasen no prueba nada sobre los datos.

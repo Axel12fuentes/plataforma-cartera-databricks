@@ -30,7 +30,7 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://TU-WORKSPACE.azuredatabricks.net
+      host: https://adb-7405618998096237.17.azuredatabricks.net
 
   # --------------------------------------------------------------- prod
   # Mismo codigo, otro catalogo. Esa es toda la diferencia: no hay una rama
@@ -38,7 +38,7 @@ targets:
   prod:
     mode: production
     workspace:
-      host: https://TU-WORKSPACE.azuredatabricks.net
+      host: https://adb-7405618998096237.17.azuredatabricks.net
       root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalogo: prod

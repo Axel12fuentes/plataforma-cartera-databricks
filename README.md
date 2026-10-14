@@ -7,8 +7,9 @@ medallón sobre Delta Lake, con ingesta incremental.
 Es la continuación del [warehouse dimensional de créditos](https://github.com/Axel12fuentes/warehouse-dimensional-creditos):
 los créditos que allí se colocan son los que aquí se cobran.
 
-> **Estado:** pipeline completo, orquestado y con permisos a nivel de fila y
-> columna. Pendiente: modelo estrella en oro y despliegue con Asset Bundles.
+> **Estado:** pipeline completo, orquestado, con permisos a nivel de fila y
+> columna, y desplegado en dos entornos (`dev` y `prod`) desde un Asset Bundle.
+> Pendiente: modelo estrella en oro.
 
 ---
 
@@ -77,6 +78,9 @@ graph TD
 | Disparo del trabajo | **Llegada de archivo**, no horario fijo | Un cron corre aunque no haya datos, y no corre si el archivo llega tarde |
 | Permisos por asesor | **Filtro de fila**, no una vista por asesor | Una tabla, una regla. Un alta de personal no toca el pipeline |
 | Saldo de capital | **Máscara de columna** | El dato sensible se oculta en el motor, no en el tablero |
+| Entornos | **Un catálogo por entorno**, no un esquema | Con `MANAGED LOCATION` propia, los datos de prod quedan en otra carpeta, no solo bajo otro nombre |
+| El catálogo en el código | **Parámetro del trabajo**, no literal | Promover a producción es cambiar una variable, no editar SQL |
+| Despliegue | **Asset Bundles** | El trabajo entero es texto versionado: se recrea en otro workspace con un comando |
 
 ---
 
@@ -124,12 +128,21 @@ notebooks/04_oro.sql       tramos de mora
 notebooks/05_gobierno.sql  filtro de fila y máscara de columna
 ```
 
-### 5. Orquestar
+### 5. Desplegar el trabajo
 
-Trabajos → crear trabajo `cartera_medallon_diario` con tres tareas encadenadas
-(`bronce` → `plata` → `oro`) sobre serverless, y un disparador por llegada de
-archivo sobre `/Volumes/dev/bronce/landing/`. El detalle, en
-[docs/02-orquestacion-y-gobierno.md](docs/02-orquestacion-y-gobierno.md).
+No hace falta armarlo a clics: está descrito en el bundle.
+
+```bash
+databricks auth login --host https://adb-<id>.<n>.azuredatabricks.net --profile <perfil>
+databricks bundle validate -t dev
+databricks bundle deploy   -t dev
+databricks bundle run cartera_medallon_diario -t dev
+```
+
+El detalle de la orquestación y los permisos está en
+[docs/02-orquestacion-y-gobierno.md](docs/02-orquestacion-y-gobierno.md), y el
+del despliegue y los dos entornos en
+[docs/03-git-y-asset-bundles.md](docs/03-git-y-asset-bundles.md).
 
 ---
 
@@ -137,10 +150,12 @@ archivo sobre `/Volumes/dev/bronce/landing/`. El detalle, en
 
 ```
 .
+├─ databricks.yml  El bundle: destinos dev y prod
+├─ resources/      El trabajo, descrito en YAML
 ├─ notebooks/      Los cuadernos, en orden de ejecución
 ├─ scripts/        El generador de datos
 ├─ datos/          Los CSV (ignorados por git)
-└─ docs/           Cuaderno de errores · orquestación y gobierno
+└─ docs/           Cuaderno de errores · orquestación y gobierno · despliegue
 ```
 
 ---
@@ -153,8 +168,9 @@ archivo sobre `/Volumes/dev/bronce/landing/`. El detalle, en
 - [x] Oro: tramos de mora por asesor y oficina
 - [x] Orquestación con Lakeflow Jobs, disparada por llegada de archivo
 - [x] Permisos: cada asesor ve solo su cartera, con el saldo enmascarado
+- [x] Catálogo parametrizado: el mismo código corre en `dev` y en `prod`
+- [x] Despliegue con Asset Bundles en dos entornos
 - [ ] Modelo estrella en oro
-- [ ] Despliegue con Asset Bundles
 
 ---
 
