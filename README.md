@@ -126,6 +126,7 @@ notebooks/02_bronce.py     Auto Loader
 notebooks/03_plata.sql     limpieza y cuarentena
 notebooks/04_oro.sql       tramos de mora
 notebooks/05_gobierno.sql  filtro de fila y máscara de columna
+notebooks/06_rendimiento.sql  OPTIMIZE, liquid clustering, VACUUM, planes
 ```
 
 ### 5. Desplegar el trabajo
@@ -170,6 +171,7 @@ del despliegue y los dos entornos en
 - [x] Permisos: cada asesor ve solo su cartera, con el saldo enmascarado
 - [x] Catálogo parametrizado: el mismo código corre en `dev` y en `prod`
 - [x] Despliegue con Asset Bundles en dos entornos
+- [x] Mantenimiento: compactación, clustering y retención
 - [ ] Modelo estrella en oro
 
 ---
