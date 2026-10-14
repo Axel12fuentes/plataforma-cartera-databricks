@@ -1,0 +1,6 @@
+.env
+datos/*.csv
+datos/*.zip
+!datos/.gitkeep
+__pycache__/
+*.pyc
