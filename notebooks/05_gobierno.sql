@@ -18,6 +18,23 @@
 -- COMMAND ----------
 
 -- MAGIC %md
+-- MAGIC ## El catalogo es un parametro
+-- MAGIC
+-- MAGIC Nada en el codigo dice `dev`. El catalogo llega desde afuera: el mismo
+-- MAGIC cuaderno corre sobre `dev` al desarrollar y sobre `prod` al promover.
+-- MAGIC Esa es **toda** la diferencia entre los dos entornos.
+
+-- COMMAND ----------
+
+CREATE WIDGET TEXT catalogo DEFAULT "dev";
+
+-- COMMAND ----------
+
+USE CATALOG IDENTIFIER(:catalogo);
+
+-- COMMAND ----------
+
+-- MAGIC %md
 -- MAGIC ## 1 · A quien pertenece cada cartera
 -- MAGIC
 -- MAGIC El filtro necesita saber que asesor es quien consulta. Esa relacion es
@@ -25,12 +42,12 @@
 
 -- COMMAND ----------
 
-CREATE TABLE IF NOT EXISTS dev.oro.asignacion_asesor (
+CREATE TABLE IF NOT EXISTS oro.asignacion_asesor (
   correo    STRING,
   id_asesor STRING
 );
 
-INSERT INTO dev.oro.asignacion_asesor VALUES (current_user(), 'A-003');
+INSERT INTO oro.asignacion_asesor VALUES (current_user(), 'A-003');
 
 -- COMMAND ----------
 
@@ -45,14 +62,14 @@ INSERT INTO dev.oro.asignacion_asesor VALUES (current_user(), 'A-003');
 
 -- COMMAND ----------
 
-CREATE OR REPLACE FUNCTION dev.oro.filtro_asesor(p_id_asesor STRING)
+CREATE OR REPLACE FUNCTION oro.filtro_asesor(p_id_asesor STRING)
 RETURN is_account_group_member('gerencia')
-    OR EXISTS (SELECT 1 FROM dev.oro.asignacion_asesor a
+    OR EXISTS (SELECT 1 FROM oro.asignacion_asesor a
                WHERE a.correo = current_user()
                  AND a.id_asesor = p_id_asesor);
 
-ALTER TABLE dev.oro.cartera_mora
-  SET ROW FILTER dev.oro.filtro_asesor ON (id_asesor);
+ALTER TABLE oro.cartera_mora
+  SET ROW FILTER oro.filtro_asesor ON (id_asesor);
 
 -- COMMAND ----------
 
@@ -64,11 +81,11 @@ ALTER TABLE dev.oro.cartera_mora
 
 -- COMMAND ----------
 
-CREATE OR REPLACE FUNCTION dev.oro.enmascarar_monto(monto DECIMAL(12,2))
+CREATE OR REPLACE FUNCTION oro.enmascarar_monto(monto DECIMAL(12,2))
 RETURN CASE WHEN is_account_group_member('riesgos') THEN monto ELSE NULL END;
 
-ALTER TABLE dev.oro.cartera_mora
-  ALTER COLUMN saldo_capital SET MASK dev.oro.enmascarar_monto;
+ALTER TABLE oro.cartera_mora
+  ALTER COLUMN saldo_capital SET MASK oro.enmascarar_monto;
 
 -- COMMAND ----------
 
@@ -85,7 +102,7 @@ SELECT id_asesor,
        count(*)           AS creditos,
        sum(monto_vencido) AS vencido,
        sum(saldo_capital) AS saldo
-FROM dev.oro.cartera_mora
+FROM oro.cartera_mora
 GROUP BY 1 ORDER BY 1;
 
 -- COMMAND ----------

@@ -4,3 +4,6 @@ datos/*.zip
 !datos/.gitkeep
 __pycache__/
 *.pyc
+
+# Databricks CLI
+.databricks/

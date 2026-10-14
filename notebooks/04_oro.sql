@@ -14,16 +14,34 @@
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE dev.oro.cartera_mora AS
+-- MAGIC %md
+-- MAGIC ## El catalogo es un parametro
+-- MAGIC
+-- MAGIC Nada en el codigo dice `dev`. El catalogo llega desde afuera: el mismo
+-- MAGIC cuaderno corre sobre `dev` al desarrollar y sobre `prod` al promover.
+-- MAGIC Esa es **toda** la diferencia entre los dos entornos.
+
+-- COMMAND ----------
+
+CREATE WIDGET TEXT catalogo    DEFAULT "dev";
+CREATE WIDGET TEXT fecha_corte DEFAULT "2026-10-13";
+
+-- COMMAND ----------
+
+USE CATALOG IDENTIFIER(:catalogo);
+
+-- COMMAND ----------
+
+CREATE OR REPLACE TABLE oro.cartera_mora AS
 WITH vencidas AS (
-  SELECT * FROM dev.plata.cuotas
-  WHERE fecha_vencimiento <= DATE '2026-10-13'
+  SELECT * FROM plata.cuotas
+  WHERE fecha_vencimiento <= DATE(:fecha_corte)
 ),
 pagadas AS (
-  SELECT DISTINCT id_credito, nro_cuota FROM dev.plata.pagos
+  SELECT DISTINCT id_credito, nro_cuota FROM plata.pagos
 ),
 impagas AS (
-  SELECT v.*, DATEDIFF(DATE '2026-10-13', v.fecha_vencimiento) AS dias_atraso
+  SELECT v.*, DATEDIFF(DATE(:fecha_corte), v.fecha_vencimiento) AS dias_atraso
   FROM vencidas v
   LEFT ANTI JOIN pagadas p
     ON p.id_credito = v.id_credito AND p.nro_cuota = v.nro_cuota
@@ -47,12 +65,12 @@ GROUP BY ALL;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE dev.oro.mora_por_oficina AS
+CREATE OR REPLACE TABLE oro.mora_por_oficina AS
 SELECT region, oficina, tramo_mora,
        count(*)                   AS creditos,
        sum(monto_vencido)         AS monto_vencido,
        round(avg(dias_atraso), 1) AS dias_promedio
-FROM dev.oro.cartera_mora
+FROM oro.cartera_mora
 GROUP BY ALL;
 
 -- COMMAND ----------
@@ -68,5 +86,5 @@ GROUP BY ALL;
 
 SELECT tramo_mora, count(*) AS creditos,
        round(sum(monto_vencido), 0) AS monto_vencido
-FROM dev.oro.cartera_mora
+FROM oro.cartera_mora
 GROUP BY 1 ORDER BY 1;

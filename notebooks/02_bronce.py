@@ -17,6 +17,23 @@ from pyspark.sql.functions import current_timestamp, col
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## El catalogo es un parametro
+# MAGIC
+# MAGIC Nada en el codigo dice `dev`. El catalogo llega desde afuera: el mismo
+# MAGIC cuaderno corre sobre `dev` al desarrollar y sobre `prod` al promover.
+# MAGIC Esa es **toda** la diferencia entre los dos entornos.
+
+# COMMAND ----------
+
+dbutils.widgets.text("catalogo", "dev")
+catalogo = dbutils.widgets.get("catalogo")
+
+# Fijar el catalogo de la sesion vale tambien para las celdas %sql de abajo.
+spark.sql(f"USE CATALOG {catalogo}")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Cuotas · el cronograma se entrega una vez
 
 # COMMAND ----------
@@ -24,11 +41,11 @@ from pyspark.sql.functions import current_timestamp, col
 cuotas = (spark.read
     .option("header", "true")
     .option("inferSchema", "true")
-    .csv("/Volumes/dev/bronce/landing/cuotas.csv")
+    .csv(f"/Volumes/{catalogo}/bronce/landing/cuotas.csv")
     .withColumn("_ingerido_en", current_timestamp())
     .withColumn("_archivo", col("_metadata.file_path")))
 
-cuotas.write.mode("overwrite").saveAsTable("dev.bronce.cuotas")
+cuotas.write.mode("overwrite").saveAsTable("bronce.cuotas")
 print(f"{cuotas.count():,} cuotas")
 
 # COMMAND ----------
@@ -45,8 +62,8 @@ print(f"{cuotas.count():,} cuotas")
 
 # COMMAND ----------
 
-ruta = "/Volumes/dev/bronce/landing/"
-ckpt = "/Volumes/dev/bronce/checkpoints/pagos/"
+ruta = f"/Volumes/{catalogo}/bronce/landing/"
+ckpt = f"/Volumes/{catalogo}/bronce/checkpoints/pagos/"
 
 pagos = (spark.readStream
     .format("cloudFiles")
@@ -67,7 +84,7 @@ pagos = (spark.readStream
 q = (pagos.writeStream
     .option("checkpointLocation", ckpt)
     .trigger(availableNow=True)
-    .toTable("dev.bronce.pagos"))
+    .toTable("bronce.pagos"))
 
 q.awaitTermination()
 print("filas leidas en esta corrida:",
@@ -87,5 +104,5 @@ print("filas leidas en esta corrida:",
 # MAGIC SELECT date_trunc('second', _ingerido_en) AS tanda,
 # MAGIC        count(*)                           AS filas,
 # MAGIC        count(DISTINCT _archivo)           AS archivos
-# MAGIC FROM dev.bronce.pagos
+# MAGIC FROM bronce.pagos
 # MAGIC GROUP BY 1 ORDER BY 1;

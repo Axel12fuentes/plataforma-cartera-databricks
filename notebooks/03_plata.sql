@@ -8,7 +8,24 @@
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE dev.plata.cuotas AS
+-- MAGIC %md
+-- MAGIC ## El catalogo es un parametro
+-- MAGIC
+-- MAGIC Nada en el codigo dice `dev`. El catalogo llega desde afuera: el mismo
+-- MAGIC cuaderno corre sobre `dev` al desarrollar y sobre `prod` al promover.
+-- MAGIC Esa es **toda** la diferencia entre los dos entornos.
+
+-- COMMAND ----------
+
+CREATE WIDGET TEXT catalogo DEFAULT "dev";
+
+-- COMMAND ----------
+
+USE CATALOG IDENTIFIER(:catalogo);
+
+-- COMMAND ----------
+
+CREATE OR REPLACE TABLE plata.cuotas AS
 SELECT
   CAST(id_credito        AS BIGINT)        AS id_credito,
   CAST(nro_cuota         AS INT)           AS nro_cuota,
@@ -18,7 +35,7 @@ SELECT
   moneda, id_cliente, id_asesor,
   TRIM(oficina) AS oficina, TRIM(region) AS region, producto,
   current_timestamp() AS _procesado_en
-FROM dev.bronce.cuotas;
+FROM bronce.cuotas;
 
 -- COMMAND ----------
 
@@ -35,7 +52,7 @@ FROM dev.bronce.cuotas;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE dev.plata.pagos AS
+CREATE OR REPLACE TABLE plata.pagos AS
 WITH tipado AS (
   SELECT
     TRY_CAST(id_pago      AS BIGINT)        AS id_pago,
@@ -45,7 +62,7 @@ WITH tipado AS (
     TRY_CAST(monto_pagado AS DECIMAL(12,2)) AS monto_pagado,
     INITCAP(TRIM(canal_pago))               AS canal_pago,
     _archivo, _ingerido_en
-  FROM dev.bronce.pagos
+  FROM bronce.pagos
 ),
 valido AS (
   SELECT * FROM tipado
@@ -73,7 +90,7 @@ FROM dedup WHERE rn = 1;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE dev.plata.pagos_cuarentena AS
+CREATE OR REPLACE TABLE plata.pagos_cuarentena AS
 SELECT *,
   CASE
     WHEN TRY_CAST(fecha_pago   AS DATE) IS NULL       THEN 'fecha vacia o invalida'
@@ -81,16 +98,16 @@ SELECT *,
     ELSE 'otro'
   END AS motivo,
   current_timestamp() AS _detectado_en
-FROM dev.bronce.pagos
+FROM bronce.pagos
 WHERE TRY_CAST(fecha_pago AS DATE) IS NULL
    OR TRY_CAST(monto_pagado AS DECIMAL(12,2)) <= 0;
 
 -- COMMAND ----------
 
-SELECT 'bronce'      AS capa, count(*) AS filas FROM dev.bronce.pagos
-UNION ALL SELECT 'plata',      count(*) FROM dev.plata.pagos
-UNION ALL SELECT 'cuarentena', count(*) FROM dev.plata.pagos_cuarentena;
+SELECT 'bronce'      AS capa, count(*) AS filas FROM bronce.pagos
+UNION ALL SELECT 'plata',      count(*) FROM plata.pagos
+UNION ALL SELECT 'cuarentena', count(*) FROM plata.pagos_cuarentena;
 
 -- COMMAND ----------
 
-SELECT motivo, count(*) FROM dev.plata.pagos_cuarentena GROUP BY 1;
+SELECT motivo, count(*) FROM plata.pagos_cuarentena GROUP BY 1;

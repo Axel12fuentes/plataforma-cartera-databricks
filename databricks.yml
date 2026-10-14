@@ -1,0 +1,46 @@
+# Databricks Asset Bundle
+#
+# Describe el proyecto entero —cuadernos y trabajo— como texto versionado.
+# Con esto, levantar el pipeline en otro workspace es un comando, no una tarde
+# de clics.
+#
+#   databricks bundle validate            revisa el YAML
+#   databricks bundle deploy  -t dev      lo crea o actualiza
+#   databricks bundle run cartera_medallon_diario -t dev
+#   databricks bundle destroy -t dev      lo borra todo
+
+bundle:
+  name: plataforma-cartera
+
+include:
+  - resources/*.yml
+
+variables:
+  catalogo:
+    description: Catalogo de Unity Catalog sobre el que corre el pipeline
+    default: dev
+
+targets:
+  # ---------------------------------------------------------------- dev
+  # mode: development hace tres cosas solo:
+  #   1. antepone [dev tu_usuario] al nombre, para no pisar a nadie
+  #   2. PAUSA los disparadores: desplegar no dispara corridas ni gasto
+  #   3. marca los recursos como tuyos
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://TU-WORKSPACE.azuredatabricks.net
+
+  # --------------------------------------------------------------- prod
+  # Mismo codigo, otro catalogo. Esa es toda la diferencia: no hay una rama
+  # "produccion" con el SQL cambiado a mano.
+  prod:
+    mode: production
+    workspace:
+      host: https://TU-WORKSPACE.azuredatabricks.net
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalogo: prod
+    run_as:
+      user_name: ${workspace.current_user.userName}

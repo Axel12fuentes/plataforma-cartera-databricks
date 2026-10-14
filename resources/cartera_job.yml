@@ -1,0 +1,76 @@
+# El trabajo, descrito como texto.
+#
+# Todo lo que se configuro a mano en la interfaz esta aqui: las tareas, su
+# orden, los reintentos, el disparador y los umbrales. Si manana alguien lo
+# cambia desde la pantalla, `bundle deploy` lo devuelve a este archivo.
+
+resources:
+  jobs:
+    cartera_medallon_diario:
+      name: cartera_medallon_diario
+      description: >-
+        Medallon de cartera y cobranzas: ingesta incremental de los pagos,
+        limpieza con cuarentena y tramos de mora por asesor y oficina.
+
+      tags:
+        proyecto: cartera
+        capa: medallon
+
+      # Parametro del trabajo -> widget del cuaderno. Es lo que hace que el
+      # mismo codigo sirva para dev y para prod.
+      parameters:
+        - name: catalogo
+          default: ${var.catalogo}
+
+      # Dos corridas a la vez se pisan sobre las mismas tablas: una espera.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+
+      # Corte duro a los 45 min: una consulta colgada no factura toda la noche.
+      timeout_seconds: 2700
+
+      # Aviso a los 15 min. No corta nada, avisa que algo va lento.
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 900
+
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+        on_duration_warning_threshold_exceeded:
+          - ${workspace.current_user.userName}
+
+      # No corre a una hora fija: corre cuando llega un archivo. Un cron
+      # corre aunque no haya datos, y no corre si el archivo llega tarde.
+      trigger:
+        file_arrival:
+          url: /Volumes/${var.catalogo}/bronce/landing/
+          min_time_between_triggers_seconds: 300
+          wait_after_last_change_seconds: 60
+
+      # Sin bloque de computo = serverless. Arranca en segundos, se apaga solo.
+      tasks:
+        - task_key: bronce
+          notebook_task:
+            notebook_path: ../notebooks/02_bronce.py
+          max_retries: 3
+          min_retry_interval_millis: 300000
+
+        - task_key: plata
+          depends_on:
+            - task_key: bronce
+          notebook_task:
+            notebook_path: ../notebooks/03_plata.sql
+          max_retries: 3
+          min_retry_interval_millis: 300000
+
+        - task_key: oro
+          depends_on:
+            - task_key: plata
+          notebook_task:
+            notebook_path: ../notebooks/04_oro.sql
+          max_retries: 3
+          min_retry_interval_millis: 300000
