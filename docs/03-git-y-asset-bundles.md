@@ -74,7 +74,7 @@ pantalla, el siguiente `deploy` lo devuelve al archivo.
 | | `dev` | `prod` |
 |---|---|---|
 | `catalogo` | `dev` | `prod` |
-| Nombre del trabajo | `[dev babydog2396] cartera_…` | `cartera_medallon_diario` |
+| Nombre del trabajo | `[dev tu_usuario] cartera_…` | `cartera_medallon_diario` |
 | Disparador al desplegar | **en pausa** | activo |
 | Carpeta del bundle | `/Workspace/Users/…` | `/Workspace/Shared/…` |
 

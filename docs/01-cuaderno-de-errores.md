@@ -234,7 +234,7 @@ tarea:
 [UNAUTHORIZED_ACCESS] PERMISSION_DENIED: The credential 'dbw_axel_dp750' is a
 workspace default credential that is only allowed to access data in the
 following paths:
-'abfss://unity-catalog-storage@dbstorage....dfs.core.windows.net/7405618998096237'
+'abfss://unity-catalog-storage@dbstorage....dfs.core.windows.net/<id-del-workspace>'
 ```
 
 **La causa.** La credencial por defecto del workspace está **acotada a una

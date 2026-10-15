@@ -9,6 +9,10 @@
 #   databricks bundle run cartera_medallon_diario -t dev
 #   databricks bundle destroy -t dev      lo borra todo
 
+# Antes de usarlo: reemplaza el host de los dos destinos por la URL de tu
+# workspace (la de la barra de direcciones). El procedimiento completo esta
+# en docs/05-apagar-y-reconstruir.md
+
 bundle:
   name: plataforma-cartera
 
@@ -30,7 +34,7 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://adb-7405618998096237.17.azuredatabricks.net
+      host: https://adb-REEMPLAZA-POR-TU-ID.N.azuredatabricks.net
 
   # --------------------------------------------------------------- prod
   # Mismo codigo, otro catalogo. Esa es toda la diferencia: no hay una rama
@@ -38,7 +42,7 @@ targets:
   prod:
     mode: production
     workspace:
-      host: https://adb-7405618998096237.17.azuredatabricks.net
+      host: https://adb-REEMPLAZA-POR-TU-ID.N.azuredatabricks.net
       root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalogo: prod
